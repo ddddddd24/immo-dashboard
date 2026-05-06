@@ -163,8 +163,7 @@
           `✨ Features (10%)    : ${fs}/10`,
         ];
         if (note) lines.push('', `📝 ${note}`);
-        return lines.join('
-');
+        return lines.join(String.fromCharCode(10));
       };
       const score = r.score
         ? `<span class="score" title="${escape(buildScoreTooltip(r.score_reason, r.score))}">${r.score}/10</span>`
