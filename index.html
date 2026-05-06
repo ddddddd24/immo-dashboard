@@ -160,9 +160,13 @@
       const pubMs = r.published ? new Date(r.published.length > 7 ? r.published : r.published + '-01').getTime() : 0;
       const isNew = pubMs > Date.now() - 6 * 3600 * 1000;
       const newBadge = isNew ? '<span style="background:#ef4444;color:white;padding:1px 5px;border-radius:4px;font-size:0.7rem;font-weight:600;margin-right:4px">🔥 NEW</span>' : '';
+      // 💎 OFF-RADAR badge: sources NOT covered by Jinka aggregator → less competition
+      const offRadarSources = new Set(['studapart','parisattitude','lodgis','immojeune','locservice','entreparticuliers','ladresse','century21','wizi','laforet','guyhoquet','kley','inli','icf','actionlogement','gensdeconfiance']);
+      const isOffRadar = offRadarSources.has(r.source);
+      const offRadarBadge = isOffRadar ? '<span style="background:#8b5cf6;color:white;padding:1px 5px;border-radius:4px;font-size:0.7rem;font-weight:600;margin-right:4px" title="Source hors Jinka — moins de concurrence">💎 OFF-RADAR</span>' : '';
       return `<tr>
         <td><span class="src">${emoji} ${escape(r.source)}</span></td>
-        <td>${newBadge}<a href="${escape(r.url)}" target="_blank">${escape(r.title.slice(0, 60))}</a></td>
+        <td>${newBadge}${offRadarBadge}<a href="${escape(r.url)}" target="_blank">${escape(r.title.slice(0, 60))}</a></td>
         <td>${typeBadge}</td>
         <td>${escape(r.location.slice(0, 30))}</td>
         <td class="num"><b>${price}</b></td>
