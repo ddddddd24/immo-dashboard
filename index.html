@@ -2,6 +2,12 @@
 <html lang="fr">
 <head>
 <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#22c55e">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon-192.png">
 <title>🏠 Annonces — Dashboard Immo</title>
 <style>
   * { box-sizing: border-box; }
@@ -62,6 +68,7 @@
     <label>Prix max <input id="f-maxprice" type="number" placeholder="1000" /></label>
     <label>m² min <input id="f-minsurface" type="number" placeholder="20" /></label>
     <label>Recherche <input id="f-search" type="text" placeholder="titre / ville…" style="width:180px" /></label>
+    <label><input id="f-phone-only" type="checkbox" /> 📞 Avec tél seulement</label>
     <span class="filter-count" id="count">1098 annonces</span>
   </div>
 
@@ -98,12 +105,17 @@
     const maxPrice = parseInt(document.getElementById('f-maxprice').value) || null;
     const minSurface = parseInt(document.getElementById('f-minsurface').value) || null;
     const search = (document.getElementById('f-search').value || '').toLowerCase();
+    const phoneOnly = document.getElementById('f-phone-only').checked;
 
     let rows = ROWS.filter(r => {
       if (src && r.source !== src) return false;
       if (type && r.housing_type !== type) return false;
       if (maxPrice && (r.price === null || r.price > maxPrice)) return false;
       if (minSurface && (r.surface === null || r.surface < minSurface)) return false;
+      if (phoneOnly) {
+        // Only listings with a real phone number (not blank, not blocked)
+        if (!r.phone || r.phone === '#blocked') return false;
+      }
       if (search) {
         const blob = (r.title + ' ' + r.location).toLowerCase();
         if (!blob.includes(search)) return false;
@@ -154,7 +166,7 @@
         <td class="num">${score}</td>
         <td style="color:#64748b;font-size:0.75rem" title="${r.published_is_scrape ? 'Date de scraping (ce site ne partage pas la date de publication)' : 'Date de publication réelle'}">${r.published ? (r.published_is_scrape ? '⏱ ' : '📅 ') + escape(r.published) : ''}</td>
         <td style="font-size:0.75rem" title="${r.available_from ? 'Disponible à partir de ' + escape(formatAvail(r.available_from)) : 'Date de disponibilité non précisée dans l\'annonce'}">${r.available_from ? '🗝 ' + escape(formatAvail(r.available_from)) : '<span style="color:#475569">—</span>'}</td>
-        <td title="${r.phone === '#blocked' ? 'Site ne partage pas le téléphone' : (r.phone === '' || r.phone === null ? 'Pas de téléphone dans l\'annonce' : escape(r.phone))}">${r.phone === '#blocked' ? '🚫' : (r.phone === '' || r.phone === null ? '⚪' : '📞 ' + escape(r.phone))}</td>
+        <td title="${r.phone === '#blocked' ? 'Site ne partage pas le téléphone' : (r.phone === '' || r.phone === null ? 'Pas de téléphone dans l\'annonce' : 'Tap pour appeler')}">${r.phone === '#blocked' ? '🚫' : (r.phone === '' || r.phone === null ? '⚪' : `<a href="tel:${escape(r.phone.replace(/[^+\d]/g, ''))}" style="color:#22c55e;text-decoration:none;font-weight:600">📞 ${escape(r.phone)}</a>`)}</td>
       </tr>`;
     }).join('') || '<tr><td colspan="10" class="empty">Aucune annonce ne matche les filtres.</td></tr>';
 
@@ -175,6 +187,14 @@
   ['f-source', 'f-type', 'f-maxprice', 'f-minsurface', 'f-search'].forEach(id => {
     document.getElementById(id).addEventListener('input', render);
   });
+  document.getElementById('f-phone-only').addEventListener('change', render);
+
+  // PWA service worker registration (silent failures — works as a regular site if SW unsupported)
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('sw.js').catch(() => {});
+    });
+  }
 
   render();
 </script>
