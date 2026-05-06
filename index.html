@@ -156,9 +156,13 @@
       const typeBadge = r.housing_display
         ? `<span style="font-size:0.75rem;color:#cbd5e1;background:#334155;padding:2px 6px;border-radius:6px">${escape(r.housing_display)}</span>`
         : '<span style="color:#475569">—</span>';
+      // 🔥 NEW badge if published_at < 6h ago (real or scrape estimate)
+      const pubMs = r.published ? new Date(r.published.length > 7 ? r.published : r.published + '-01').getTime() : 0;
+      const isNew = pubMs > Date.now() - 6 * 3600 * 1000;
+      const newBadge = isNew ? '<span style="background:#ef4444;color:white;padding:1px 5px;border-radius:4px;font-size:0.7rem;font-weight:600;margin-right:4px">🔥 NEW</span>' : '';
       return `<tr>
         <td><span class="src">${emoji} ${escape(r.source)}</span></td>
-        <td><a href="${escape(r.url)}" target="_blank">${escape(r.title.slice(0, 60))}</a></td>
+        <td>${newBadge}<a href="${escape(r.url)}" target="_blank">${escape(r.title.slice(0, 60))}</a></td>
         <td>${typeBadge}</td>
         <td>${escape(r.location.slice(0, 30))}</td>
         <td class="num"><b>${price}</b></td>
