@@ -1,5 +1,5 @@
 // Minimal service worker — required for PWA installability.
-const CACHE_NAME = "immo-v2";
+const CACHE_NAME = "immo-v3";
 const ASSETS = [
   "/immo-dashboard/",
   "/immo-dashboard/index.html",
