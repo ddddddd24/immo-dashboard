@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="fr"><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>✍️ Générer un message</title>
+<style>
+  :root { --bg:#0a0a0f; --card:#15151f; --border:#26263a; --accent:#97C459;
+          --text:#e8e8f0; --muted:#8a8aa0; }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--text);
+         font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif; }
+  .nav { display:flex; gap:14px; padding:14px 18px; border-bottom:1px solid var(--border);
+         font-size:15px; flex-wrap:wrap; }
+  .nav a { color:var(--muted); text-decoration:none; }
+  .nav a.active { color:var(--accent); }
+  .wrap { max-width:720px; margin:0 auto; padding:18px; }
+  h1 { font-size:20px; margin:8px 0 16px; }
+  label { display:block; font-size:13px; color:var(--muted); margin:14px 0 5px; }
+  input, select, textarea {
+    width:100%; background:var(--card); color:var(--text);
+    border:1px solid var(--border); border-radius:10px; padding:11px 12px;
+    font-size:15px; font-family:inherit; }
+  textarea { min-height:200px; resize:vertical; line-height:1.45; }
+  .row { display:flex; gap:10px; }
+  .row > div { flex:1; }
+  details { margin:6px 0 4px; }
+  summary { cursor:pointer; color:var(--muted); font-size:13px; }
+  button { margin-top:16px; width:100%; background:var(--accent); color:#0a0a0f;
+    border:none; border-radius:10px; padding:13px; font-size:16px; font-weight:600;
+    cursor:pointer; }
+  button:disabled { opacity:.5; cursor:default; }
+  #out { margin-top:18px; white-space:pre-wrap; background:var(--card);
+    border:1px solid var(--border); border-radius:10px; padding:14px; display:none;
+    line-height:1.5; }
+  #meta { font-size:12px; color:var(--muted); margin-top:8px; min-height:16px; }
+  .copy { background:var(--border); color:var(--text); }
+</style></head><body>
+<nav class="nav">
+  <a href="index.html">📋 Annonces</a>
+  <a href="today.html">🔥 Top du jour</a>
+  <a href="contacts.html">✉️ Contacts</a>
+  <a href="generate.html" class="active">✍️ Générer</a>
+</nav>
+<div class="wrap">
+  <h1>✍️ Générer un message de candidature</h1>
+
+  <details>
+    <summary>⚙️ Réglages backend (à remplir une fois)</summary>
+    <label>Backend URL (URL du tunnel Cloudflare, ex: https://xxxx.trycloudflare.com)</label>
+    <input id="backend" placeholder="https://....trycloudflare.com">
+    <label>Token</label>
+    <input id="token" type="password" placeholder="ton GENERATE_TOKEN">
+  </details>
+
+  <label>Colle l'annonce ici (titre + description)</label>
+  <textarea id="ad" placeholder="Colle ici le texte complet de l'annonce..."></textarea>
+
+  <div class="row">
+    <div>
+      <label>Type de vendeur</label>
+      <select id="seller">
+        <option value="auto">Auto (détecté)</option>
+        <option value="particulier">Particulier</option>
+        <option value="agence">Agence</option>
+      </select>
+    </div>
+    <div>
+      <label>Lien perso (optionnel)</label>
+      <input id="perso" placeholder="ex: j'ai grandi dans ce quartier">
+    </div>
+  </div>
+
+  <button id="go">Générer</button>
+  <div id="meta"></div>
+  <div id="out"></div>
+  <button id="copy" class="copy" style="display:none">📋 Copier</button>
+</div>
+<script>
+  const $ = id => document.getElementById(id);
+  // Restore saved settings
+  for (const k of ["backend","token"]) {
+    const v = localStorage.getItem("gen_"+k); if (v) $(k).value = v;
+  }
+  $("backend").addEventListener("change", e => localStorage.setItem("gen_backend", e.target.value.trim()));
+  $("token").addEventListener("change", e => localStorage.setItem("gen_token", e.target.value));
+
+  $("go").addEventListener("click", async () => {
+    const backend = $("backend").value.trim().replace(/\/$/, "");
+    const token = $("token").value;
+    const text = $("ad").value.trim();
+    if (!backend || !token) { $("meta").textContent = "⚠️ Renseigne le backend + token dans ⚙️ Réglages."; return; }
+    if (!text) { $("meta").textContent = "⚠️ Colle d'abord une annonce."; return; }
+    localStorage.setItem("gen_backend", backend);
+    localStorage.setItem("gen_token", token);
+    $("go").disabled = true; $("go").textContent = "Génération…";
+    $("meta").textContent = ""; $("out").style.display = "none"; $("copy").style.display = "none";
+    try {
+      const r = await fetch(backend + "/generate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "X-Generate-Token": token },
+        body: JSON.stringify({ text, perso: $("perso").value.trim(), seller_type: $("seller").value })
+      });
+      const data = await r.json();
+      if (!r.ok) { $("meta").textContent = "❌ " + (data.error || r.status); }
+      else {
+        $("out").textContent = data.message; $("out").style.display = "block";
+        $("copy").style.display = "block";
+        $("meta").textContent = "Type: " + data.seller_type
+          + (data.surface ? " · " + data.surface + " m²" : "")
+          + (data.price ? " · " + data.price + " €" : "");
+      }
+    } catch (e) { $("meta").textContent = "❌ Connexion impossible au backend (tunnel éteint ?)"; }
+    $("go").disabled = false; $("go").textContent = "Générer";
+  });
+
+  $("copy").addEventListener("click", () => {
+    navigator.clipboard.writeText($("out").textContent);
+    $("copy").textContent = "✅ Copié"; setTimeout(() => $("copy").textContent = "📋 Copier", 1500);
+  });
+</script>
+</body></html>
